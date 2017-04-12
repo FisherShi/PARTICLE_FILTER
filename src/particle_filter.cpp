@@ -18,25 +18,39 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	//   x, y, theta and their uncertainties from GPS) and all weights to 1. 
 	// Add random Gaussian noise to each particle.
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
-    num_particles = 10;
+    num_particles = 5;
     cout << "number of particles: "<<num_particles << endl;
 
     double weight = 1;
     Particle particle;
 
+    // noise generation
+    default_random_engine gen;
+    normal_distribution<double> N_x_init(0, std[0]);
+    normal_distribution<double> N_y_init(0, std[1]);
+    normal_distribution<double> N_theta_init(0, std[2]);
+    double noise_x, noise_y, noise_theta;
+
     for (int i = 0; i < num_particles; ++i){
+
+        // random noises
+        noise_x = N_x_init(gen);
+        noise_y = N_y_init(gen);
+        noise_theta = N_theta_init(gen);
 
         //assign values to particles
         particle.id = i;
-        particle.x = x;
-        particle.y = y;
-        particle.theta = theta;
+        particle.x = x + noise_x;
+        particle.y = y + noise_y;
+        particle.theta = theta + noise_theta;
         particles.push_back(particle);
+        //print the particles
         cout << "particle "<< particles[i].id <<endl;
         cout << "x: " << particles[i].x << " y: " << particles[i].y << " theta: " << particles[i].theta <<endl;
 
         //initialize all the weights to 1
         weights.push_back(weight);
+        //print the weights
         cout << "weight "<< i <<": "<< weights[i] << endl;
         cout << "-----------------------------------------" << endl;
     }
