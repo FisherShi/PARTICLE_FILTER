@@ -18,7 +18,9 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	//   x, y, theta and their uncertainties from GPS) and all weights to 1. 
 	// Add random Gaussian noise to each particle.
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
-    num_particles = 5;
+
+    //set number of particles
+    num_particles = 3;
     cout << "number of particles: "<<num_particles << endl;
 
     double weight = 1;
@@ -51,10 +53,11 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
         //initialize all the weights to 1
         weights.push_back(weight);
         //print the weights
-        cout << "weight "<< i <<": "<< weights[i] << endl;
-        cout << "-----------------------------------------" << endl;
+        //cout << "weight "<< i <<": "<< weights[i] << endl;
+
     }
     is_initialized = true;
+    cout << "-----------------------------------------" << endl;
 
 }
 
@@ -63,6 +66,30 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	// NOTE: When adding noise you may find std::normal_distribution and std::default_random_engine useful.
 	//  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
 	//  http://www.cplusplus.com/reference/random/default_random_engine/
+    double x_p, y_p, theta_p;
+
+    if (abs(yaw_rate) > 0.001) {
+        for (int i = 0; i < num_particles; ++i){
+
+            double x = particles[i].x;
+            double y = particles[i].y;
+            double theta = particles[i].theta;
+
+            //predict x,y,theta
+            x_p = x + velocity/yaw_rate*(sin(theta+delta_t*yaw_rate)-sin(theta));
+            y_p = y + velocity/yaw_rate*(cos(theta)-cos(theta+delta_t*yaw_rate));
+            theta_p = theta + yaw_rate;
+            //assign new values to particles
+            particles[i].x = x_p;
+            particles[i].y = y_p;
+            particles[i].theta = theta_p;
+            //print predicted particles
+            cout << "predicted particle "<< particles[i].id <<endl;
+            cout << "x: " << particles[i].x << " y: " << particles[i].y << " theta: " << particles[i].theta <<endl;
+        }
+        cout << "-------------------" << endl;
+
+    }
 
 }
 
