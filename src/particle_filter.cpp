@@ -20,7 +20,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
 
     //set number of particles
-    num_particles = 3;
+    num_particles = 1;
     cout << "number of particles: "<<num_particles << endl;
 
     double weight = 1;
@@ -35,6 +35,10 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 
     for (int i = 0; i < num_particles; ++i){
 
+        /**
+         * noiseless initialization
+         */
+
         // random noises
         noise_x = N_x_init(gen);
         noise_y = N_y_init(gen);
@@ -42,9 +46,9 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 
         //assign values to particles
         particle.id = i;
-        particle.x = x + noise_x;
-        particle.y = y + noise_y;
-        particle.theta = theta + noise_theta;
+        particle.x = x; //+ noise_x;
+        particle.y = y; //+ noise_y;
+        particle.theta = theta;// + noise_theta;
         particles.push_back(particle);
         //print the particles
         cout << "particle "<< particles[i].id <<endl;
@@ -57,7 +61,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 
     }
     is_initialized = true;
-    cout << "-----------------------------------------" << endl;
+    cout << "------------------------" << endl;
 
 }
 
@@ -66,6 +70,9 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	// NOTE: When adding noise you may find std::normal_distribution and std::default_random_engine useful.
 	//  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
 	//  http://www.cplusplus.com/reference/random/default_random_engine/
+    /**
+     * noiseless prediction
+     */
     double x_p, y_p, theta_p;
 
     if (abs(yaw_rate) > 0.001) {
@@ -76,9 +83,9 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
             double theta = particles[i].theta;
 
             //predict x,y,theta
-            x_p = x + velocity/yaw_rate*(sin(theta+delta_t*yaw_rate)-sin(theta));
-            y_p = y + velocity/yaw_rate*(cos(theta)-cos(theta+delta_t*yaw_rate));
-            theta_p = theta + yaw_rate;
+            x_p = x +  (velocity/yaw_rate) * ((sin(theta+delta_t*yaw_rate)) - (sin(theta)));
+            y_p = y +  (velocity/yaw_rate) * ((cos(theta)) - (cos(theta+delta_t*yaw_rate)));
+            theta_p = theta + yaw_rate*delta_t;
             //assign new values to particles
             particles[i].x = x_p;
             particles[i].y = y_p;
@@ -99,6 +106,8 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 	// NOTE: this method will NOT be called by the grading code. But you will probably find it useful to 
 	//   implement this method and use it as a helper during the updateWeights phase.
 
+    
+
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], 
@@ -114,6 +123,25 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   3.33. Note that you'll need to switch the minus sign in that equation to a plus to account 
 	//   for the fact that the map's y-axis actually points downwards.)
 	//   http://planning.cs.uiuc.edu/node99.html
+
+    /**
+     * transform the observations from the vehicle's coordinate system to MAP's coordinate system
+     */
+    double x_particle = particles[0].x;
+    double y_particle = particles[0].y;
+    double theta_particle = particles[0].theta;
+
+    double x_obs_map, y_obs_map;
+
+    for (int i =0; i< observations.size(); ++i){
+        double x_obs_car = observations[i].x;
+        double y_obs_car = observations[i].y;
+        x_obs_map = x_particle + (x_obs_car*cos(theta_particle)-y_obs_car*sin(theta_particle));
+        y_obs_map = y_particle + (x_obs_car*sin(theta_particle)+y_obs_car*cos(theta_particle));
+        cout << "converted x: " << x_obs_map << endl;
+        cout << "converted y: " << y_obs_map << endl;
+
+     }
 }
 
 void ParticleFilter::resample() {
