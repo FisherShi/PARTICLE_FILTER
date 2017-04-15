@@ -20,7 +20,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
 
     //set number of particles
-    num_particles = 1;
+    num_particles = 2;
     cout << "number of particles: "<<num_particles << endl;
 
     double weight = 1;
@@ -35,10 +35,6 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 
     for (int i = 0; i < num_particles; ++i){
 
-        /**
-         * noiseless initialization
-         */
-
         // random noises
         noise_x = N_x_init(gen);
         noise_y = N_y_init(gen);
@@ -46,9 +42,9 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 
         //assign values to particles
         particle.id = i;
-        particle.x = x; //+ noise_x;
-        particle.y = y; //+ noise_y;
-        particle.theta = theta;// + noise_theta;
+        particle.x = x + noise_x;
+        particle.y = y + noise_y;
+        particle.theta = theta + noise_theta;
         particles.push_back(particle);
         //print the particles
         cout << "particle "<< particles[i].id <<endl;
@@ -61,7 +57,6 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 
     }
     is_initialized = true;
-    cout << "------------------------" << endl;
 
 }
 
@@ -70,6 +65,8 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	// NOTE: When adding noise you may find std::normal_distribution and std::default_random_engine useful.
 	//  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
 	//  http://www.cplusplus.com/reference/random/default_random_engine/
+    cout << "--------------------------------Prediction-------------------------------------" << endl;
+
     /**
      * noiseless prediction
      */
@@ -94,8 +91,6 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
             cout << "predicted particle "<< particles[i].id <<endl;
             cout << "x: " << particles[i].x << " y: " << particles[i].y << " theta: " << particles[i].theta <<endl;
         }
-        cout << "-------------------" << endl;
-
     }
 
 }
@@ -105,9 +100,6 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 	//   observed measurement to this particular landmark.
 	// NOTE: this method will NOT be called by the grading code. But you will probably find it useful to 
 	//   implement this method and use it as a helper during the updateWeights phase.
-
-    
-
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], 
@@ -124,24 +116,45 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   for the fact that the map's y-axis actually points downwards.)
 	//   http://planning.cs.uiuc.edu/node99.html
 
-    /**
-     * transform the observations from the vehicle's coordinate system to MAP's coordinate system
-     */
-    double x_particle = particles[0].x;
-    double y_particle = particles[0].y;
-    double theta_particle = particles[0].theta;
+    cout << "--------------------------------updateWeight-------------------------------------" << endl;
 
-    double x_obs_map, y_obs_map;
+    for (int i = 0; i < num_particles; ++i) {
+        //transform the observations from the vehicle's coordinate system to MAP's coordinate system
+        double x_particle = particles[i].x;
+        double y_particle = particles[i].y;
+        double theta_particle = particles[i].theta;
 
-    for (int i =0; i< observations.size(); ++i){
-        double x_obs_car = observations[i].x;
-        double y_obs_car = observations[i].y;
-        x_obs_map = x_particle + (x_obs_car*cos(theta_particle)-y_obs_car*sin(theta_particle));
-        y_obs_map = y_particle + (x_obs_car*sin(theta_particle)+y_obs_car*cos(theta_particle));
-        cout << "converted x: " << x_obs_map << endl;
-        cout << "converted y: " << y_obs_map << endl;
+        double x_obs_map, y_obs_map;
 
-     }
+        for (int j = 0; j < observations.size(); ++j) {
+            //convert from car coordinate to MAP coordinate system
+            double x_obs_car = observations[j].x;
+            double y_obs_car = observations[j].y;
+            x_obs_map = x_particle + (x_obs_car * cos(theta_particle) - y_obs_car * sin(theta_particle));
+            y_obs_map = y_particle + (x_obs_car * sin(theta_particle) + y_obs_car * cos(theta_particle));
+            cout << "particle "<< i << " converted observation: (" << x_obs_map << "," << y_obs_map << ")" << endl;
+
+            //match landmark based on distance
+            double distance_min = 100;
+            int landmark_match;
+            for (int k = 0; k < map_landmarks.landmark_list.size(); ++k) {
+                double x_landmark = map_landmarks.landmark_list[k].x_f;
+                double y_landmark = map_landmarks.landmark_list[k].y_f;
+                double x_distance = (x_obs_map - x_landmark) * (x_obs_map - x_landmark);
+                double y_distance = (y_obs_map - y_landmark) * (y_obs_map - y_landmark);
+                double distance = sqrt(x_distance + y_distance);
+                //update minimum distance
+                if (distance < distance_min) {
+                    distance_min = distance;
+                    landmark_match = map_landmarks.landmark_list[k].id_i;
+                }
+            }
+            observations[j].id = landmark_match;
+            cout << "match with landmark: " << observations[j].id << endl;
+            cout << "distance with landmark:" << distance_min << endl;
+
+        }
+    }
 }
 
 void ParticleFilter::resample() {
