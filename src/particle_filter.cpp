@@ -20,9 +20,8 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	// Add random Gaussian noise to each particle.
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
 
-    //set number of particles
-    num_particles = 100;
-    //cout << "number of particles: "<<num_particles << endl;
+    //number of particles
+    num_particles = 10;
 
     double weight = 1;
     Particle particle;
@@ -34,6 +33,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
     normal_distribution<double> N_theta_init(0, std[2]);
     double noise_x, noise_y, noise_theta;
 
+    //create particles
     for (int i = 0; i < num_particles; ++i){
 
         // random noises
@@ -52,7 +52,6 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
         weights.push_back(weight);
     }
     is_initialized = true;
-
 }
 
 void ParticleFilter::prediction(double delta_t, double std_pos[], double velocity, double yaw_rate) {
@@ -70,14 +69,10 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 
     double x_p, y_p, theta_p;
     for (int i = 0; i < num_particles; ++i){
+
         double x = particles[i].x;
         double y = particles[i].y;
         double theta = particles[i].theta;
-
-        // random noises
-        noise_x = N_x_init(gen);
-        noise_y = N_y_init(gen);
-        noise_theta = N_theta_init(gen);
 
         //if yaw_rate is not too small
         if (abs(yaw_rate) > 0.001) {
@@ -92,6 +87,12 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
             y_p = y + velocity * sin(theta) * delta_t;
             theta_p = theta + yaw_rate*delta_t;
         }
+
+        // random noises
+        noise_x = N_x_init(gen);
+        noise_y = N_y_init(gen);
+        noise_theta = N_theta_init(gen);
+
         //assign new values to particles
         particles[i].x = x_p + noise_x;
         particles[i].y = y_p + noise_y;
@@ -100,9 +101,9 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 }
 
 void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::vector<LandmarkObs>& observations) {
-	// TODO: Find the predicted measurement that is closest to each observed measurement and assign the 
+	// TODO: Find the predicted measurement that is closest to each observed measurement and assign the
 	//   observed measurement to this particular landmark.
-	// NOTE: this method will NOT be called by the grading code. But you will probably find it useful to 
+	// NOTE: this method will NOT be called by the grading code. But you will probably find it useful to
 	//   implement this method and use it as a helper during the updateWeights phase.
 }
 
@@ -182,12 +183,14 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
             double w = exp(-0.5*(x_distance_min/x_std_sqr+y_distance_min/y_std_sqr))/(2*M_PI*x_std*y_std);
             particles[i].weight = particles[i].weight*w;
         }
+        //sum up the total weights for normaliation
         weight_sum = weight_sum + particles[i].weight;
-        }
+    }
     //assign the weights
     for (int i=0; i < num_particles; ++i){
         //normalize weights
         particles[i].weight = particles[i].weight/weight_sum;
+        //update weights list
         weights[i] = particles[i].weight;
     }
 }
@@ -196,21 +199,26 @@ void ParticleFilter::resample() {
 	// TODO: Resample particles with replacement with probability proportional to their weight. 
 	// NOTE: You may find std::discrete_distribution helpful here.
 	//   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
+
+    //create discrete distribution
     random_device rd;
     mt19937 gen(rd());
     discrete_distribution<> d(weights.begin(),weights.end());
+
+    //temporary particles used to assign new values to particles
     vector<Particle> temp_particles;
+
     //resample
     for(int i=0; i<num_particles; ++i) {
         Particle a = particles[d(gen)];
         temp_particles.push_back(a);
     }
+
     //update particles
     for(int i=0; i<num_particles; ++i) {
         particles[i] = temp_particles[i];
     }
 }
-
 
 void ParticleFilter::write(std::string filename) {
 	// You don't need to modify this file.
